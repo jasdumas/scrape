@@ -1,0 +1,93 @@
+---
+title: "Beer advocate Scrape with import.io & R"
+author: "Jasmine Dumas"
+date: "December 14, 2015"
+output: html_document
+---
+
+Getting information on Breweries can be a difficult process with data from multiple sources or sources that have limited access to developers. [Import.io](https://import.io/) instantly turns webpages into data with minimal or no set-up involved. This is going to work great for extracting meta information on breweries and I'm specifically extracting data on Connecticut-based breweries. 
+
+1. Go to [BeerAdvocate.com](http://www.beeradvocate.com/) and navigate to the search for [state](http://www.beeradvocate.com/place/directory/9/US/CT/), then onto the [breweries link](http://www.beeradvocate.com/place/list/?c_id=US&s_id=CT&brewery=Y).
+
+2. We need to deducing the URL structure due to the pagination, which is fairly simple by clicking on each of the results links (ie. 1-20, 21-40, 41-60). And here are the necessary links:             
+[http://www.beeradvocate.com/place/list/?start=0&c_id=US&s_id=CT&brewery=Y&sort=name](), 
+[http://www.beeradvocate.com/place/list/?start=20&c_id=US&s_id=CT&brewery=Y&sort=name](), 
+[http://www.beeradvocate.com/place/list/?start=40&c_id=US&s_id=CT&brewery=Y&sort=name]().
+
+3. After initially setting up an account on import.io which can be done through linking your github, you can navigate to your my data/mine page and input the previous links into the bulk extractor for your _Magic API_ and run the queries.
+
+4. The new output page will be an awesome tabular view of all of the extracted link data ready for export in multiple formats (ie. Spreadsheet for CSV)!
+
+5. Read the data into R:
+```{r, message=FALSE}
+beer_advocate <- read.csv("beeradvocate.com API 14th Dec 10-37.csv")
+beer_head <- head(beer_advocate)
+```
+
+6. So we have some links and columns filled with more than one piece of info but that easy to sort and clean up:
+```{r}
+# remove duplicate columns with unimportant info
+beer_advocate$bottomdark_links._text <- NULL
+beer_advocate$bottomdark_links._source <- NULL
+beer_advocate$pageUrl <- NULL
+beer_advocate$image <- NULL
+beer_advocate$bottomdark_content_numbers._source <- NULL
+beer_advocate$bottomlight_number <- NULL
+beer_advocate$link._source <- NULL
+
+# change the column names
+colnames(beer_advocate) <- c("address", "brewery_website", "beer_advocate_website", "number_of_reviews","beer_avg", "number_of_beers", "place_type", "brewery_rating", "brewery_name", "phone_number")
+
+# get our missing values as NA
+beer_advocate[beer_advocate == "-"] = NA
+
+# clean up some of the columns and remove extra data
+beer_advocate$address <- as.character(beer_advocate$address) # change into character data type
+beer_advocate$address <- gsub(" official website", "", beer_advocate$address)
+# extract the phone number from the address column
+# http://stackoverflow.com/questions/21007607/extract-phone-number-regex
+library(stringr)
+beer_advocate$phone_number <- str_extract_all(beer_advocate$address, "\\(?\\d{3}\\)?[.-]? *\\d{3}[.-]? *[.-]?\\d{4}")
+beer_advocate$phone_number[beer_advocate$phone_number == "character(0)"] = NA
+# remove the phone number tag from the address field for geocoding
+beer_advocate$address <- gsub(" phone: \\(?\\d{3}\\)?[.-]? *\\d{3}[.-]? *[.-]?\\d{4}", "", beer_advocate$address)
+
+# change the factor for average beer rating into a numeric
+# http://stackoverflow.com/questions/3418128/how-to-convert-a-factor-to-an-integer-numeric-without-a-loss-of-information
+beer_advocate$beer_avg <- as.numeric(levels(beer_advocate$beer_avg))[beer_advocate$beer_avg]
+
+```
+
+7. Grab some latitude and longitudes for those addresses!
+```{r, message=FALSE}
+library(htmlwidgets)
+library(leaflet)
+library(ggmap)
+
+geo <- geocode(location = beer_advocate$address, output="latlon")
+beer_advocate$lon <- geo$lon
+beer_advocate$lat <- geo$lat
+```
+
+8. plot those on a nifty leaflet map!
+```{r}
+# create the pop-up info
+beer_advocate$pop_up_content <- paste(sep = "<br/>", 
+                 "<b><a href='", beer_advocate$beer_advocate_website, "'>", beer_advocate$brewery_name, "</a></b>",    beer_advocate$address,
+                 beer_advocate$phone_number, paste("Average beer rating: ", beer_advocate$beer_avg,"/5.0"))
+
+# add colors corresponding to the average beer ratings  
+pal <- colorNumeric("YlOrRd", beer_advocate$beer_avg, n = 6) 
+
+m <- leaflet(data = beer_advocate) %>% 
+  addTiles() %>%
+  setView(lng =-72.70190, lat=41.75798, zoom = 8) %>% 
+  addCircleMarkers(~lon, ~lat, popup = ~as.character(pop_up_content), color = ~pal(beer_avg)) %>%
+  addLegend("topright", pal = pal, values = ~beer_avg,
+    title = "Average Beer Ratings at Brewery",
+    opacity = 1
+  )
+m
+```
+
+9. In conclusion aside from the usual headaches of data cleaning, this was a cool half-day project that combines some neat features of web scraping with [Import.io](https://import.io/), and R.
