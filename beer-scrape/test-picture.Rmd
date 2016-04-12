@@ -1,0 +1,8 @@
+---
+title: "test-picture"
+author: "Jasmine Dumas"
+date: "March 4, 2016"
+output: html_document
+---
+
+<img src="https://www.dropbox.com/s/j4djidmmszewc5m/BA-1.jpeg?dl=0" />

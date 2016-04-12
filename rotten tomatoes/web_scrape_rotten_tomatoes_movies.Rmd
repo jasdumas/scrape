@@ -1,0 +1,106 @@
+---
+title: "Web Scraping the Best of Rotten Tomatoes"
+author: "Jasmine Dumas"
+date: "April 7th, 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = TRUE,
+	error = TRUE,
+	message = FALSE,
+	warning = FALSE
+)
+```
+
+## About rvest
+
+rvest helps you scrape information stored from web pages. It is designed to work with magrittr to make it easy to express common web scraping tasks, inspired by libraries like beautiful soup. Source: <https://github.com/hadley/rvest>
+
+## Rotten Tomatoes
+
+Rotten Tomatoes is a website launched in 1998 devoted to film reviews and news; it is widely known as a film review aggregator. Coverage now includes TV content as well. The name derives from the practice of audiences throwing rotten tomatoes when disapproving of a poor stage performance. Source <https://en.wikipedia.org/wiki/Rotten_Tomatoes>. Movies included in this analysis have 40 or more critic reviews. Eligible movies are ranked based on their Adjusted Scores.
+
+## Webscraping the top rated movies from different genres
+
+1. isolate the urls
+
+2. set-up an empty data.frame to append each table from the urls to
+
+3. in a for loop pass the urls through the rvest read_html functions as a data.frame
+
+4. change the data type of the ratings
+
+5. add the movie type to each batch
+    
+```{r, scrape}
+library(rvest)
+
+movie_url_list <- c("http://www.rottentomatoes.com/top/bestofrt/", 
+                    "http://www.rottentomatoes.com/top/bestofrt/top_100_action__adventure_movies", 
+                    "http://www.rottentomatoes.com/top/bestofrt/top_100_animation_movies", 
+                    "http://www.rottentomatoes.com/top/bestofrt/top_100_art_house__international_movies", 
+                    "http://www.rottentomatoes.com/top/bestofrt/top_100_classics_movies", 
+                    "http://www.rottentomatoes.com/top/bestofrt/top_100_comedy_movies",
+                    "http://www.rottentomatoes.com/top/bestofrt/top_100_cult_movies_movies", 
+                    "http://www.rottentomatoes.com/top/bestofrt/top_100_documentary_movies", 
+                    "http://www.rottentomatoes.com/top/bestofrt/top_100_drama_movies", 
+                    "http://www.rottentomatoes.com/top/bestofrt/top_100_gay__lesbian_movies", 
+                    "http://www.rottentomatoes.com/top/bestofrt/top_100_horror_movies", 
+                    "http://www.rottentomatoes.com/top/bestofrt/top_100_kids__family_movies", 
+                    "http://www.rottentomatoes.com/top/bestofrt/top_100_musical__performing_arts_movies", 
+                    "http://www.rottentomatoes.com/top/bestofrt/top_100_mystery__suspense_movies", 
+                    "http://www.rottentomatoes.com/top/bestofrt/top_100_romance_movies", 
+                    "http://www.rottentomatoes.com/top/bestofrt/top_100_science_fiction__fantasy_movies", 
+                    "http://www.rottentomatoes.com/top/bestofrt/top_100_special_interest_movies", 
+                    "http://www.rottentomatoes.com/top/bestofrt/top_100_sports__fitness_movies", 
+                    "http://www.rottentomatoes.com/top/bestofrt/top_100_television_movies", 
+                    "http://www.rottentomatoes.com/top/bestofrt/top_100_western_movies")
+
+master_df <- data.frame()
+
+for (i in movie_url_list){
+  table <- read_html(i) %>% html_table(fill=TRUE) %>% as.data.frame()
+  # clean up table and remove junk columns
+  table2 <- table[, -c(1, 2, 7:10)] 
+  # strip out % from ratings so that we can do something with that number
+  table2$RatingTomatometer <- as.numeric(gsub("%", "", table2$RatingTomatometer))
+  # add type of movie to data frame
+  table2$type <- as.character(gsub("http://www.rottentomatoes.com/top/bestofrt/top_100_", "", i))  
+  # append to a master data frame
+  master_df <- rbind(master_df, table2)
+}
+
+# clean up master data frame type column for url category labels
+master_df$type <- as.character(gsub("_movies", "", master_df$type))
+master_df$type <- as.character(gsub("http://www.rottentomatoes.com/top/bestofrt/", "alltime", master_df$type))
+master_df$type <- as.character(gsub("_", " ", master_df$type))
+# clean up master data for funky characters
+#master_df$Title <- as.character(gsub("<f4>", "", master_df$Title))
+#master_df$Title <- as.character(gsub("<e9>", "", master_df$Title))
+#master_df$Title <- as.character(gsub("<e8>", "", master_df$Title))
+
+library(DT)
+datatable(master_df)
+```
+
+__________________________
+
+## data vizualization of Ratings v. Reviews
+
+using the dynamic features of [plotly](https://plot.ly/r/) the plot can be examined by the difference between the different genres. Its interesting to note the unique pockets or clusters formed by the different geners and in affect the ratings. The animation genre seems to be more widespread in the tomato ratings.
+```{r, pplotly}
+library(plotly)
+
+plot_ly(data = master_df, 
+             x = RatingTomatometer, 
+             y = No..of.Reviews, 
+             color = type, 
+             mode = "markers", 
+             text = Title, 
+             name = "Best of Rotten Tomato Movie Reviews")
+
+```
+
+further analysis projects include clustering and recommendation engine ...

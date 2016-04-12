@@ -1,22 +1,55 @@
 ---
-title: "Beer advocate Scrape with import.io & R"
+title: "Web Scraping Craft Beer Ratings From Beer Advocate with import.io & R"
 author: "Jasmine Dumas"
-date: "December 14, 2015"
+date: 'Created: December 14, 2015; Updated March 4, 2016'
 output: html_document
 ---
 
-Getting information on Breweries can be a difficult process with data from multiple sources or sources that have limited access to developers. [Import.io](https://import.io/) instantly turns webpages into data with minimal or no set-up involved. This is going to work great for extracting meta information on breweries and I'm specifically extracting data on Connecticut-based breweries. 
+# Introduction on Import.io and Beer Advocate
 
-1. Go to [BeerAdvocate.com](http://www.beeradvocate.com/) and navigate to the search for [state](http://www.beeradvocate.com/place/directory/9/US/CT/), then onto the [breweries link](http://www.beeradvocate.com/place/list/?c_id=US&s_id=CT&brewery=Y).
+Getting information on craft breweries can be a difficult process with data dispersed over multiple websites or in unuseable formats, necessary for analysis. [Import.io](https://import.io/) _instantly_ turns webpages into data ready for analysis with minimal or no set-up involved. The previous [tutorial](http://trendct.org/2016/01/08/how-to-scrape-airbnb-data-without-programming-using-import-io/) highlights the process in detail. This method works great for extracting meta data on craft breweries, and overall beer ratings from the popular site Beer Advocate which is a online community which supports beer education, events and a forum to rate beers.
 
-2. We need to deducing the URL structure due to the pagination, which is fairly simple by clicking on each of the results links (ie. 1-20, 21-40, 41-60). And here are the necessary links:             
+# Getting the websites which contain out data of interest
+
+1. Go to [BeerAdvocate.com](http://www.beeradvocate.com/) and navigate to the search for a place (Connecticut) [state](http://www.beeradvocate.com/place/directory/9/US/CT/), then onto the [breweries link](http://www.beeradvocate.com/place/list/?c_id=US&s_id=CT&brewery=Y).
+
+Screenshot 1
+
+[https://www.dropbox.com/s/j4djidmmszewc5m/BA-1.jpeg?dl=0]("https://www.dropbox.com/s/j4djidmmszewc5m/BA-1.jpeg?dl=0")
+
+Screenshot 2
+
+[https://www.dropbox.com/s/jdteuq03cb1stqv/BA-2.jpeg?dl=0]("https://www.dropbox.com/s/jdteuq03cb1stqv/BA-2.jpeg?dl=0")
+
+Screenshot 3
+
+[https://www.dropbox.com/s/y5r1q8e5dq67hdy/BA-3.jpeg?dl=0]("https://www.dropbox.com/s/y5r1q8e5dq67hdy/BA-3.jpeg?dl=0")
+
+2. We need to determine the URL structure due to the pagination on Beer advocate, but luckily enough this is fairly simple to do by clicking on each of the results links (ie. 1-20, 21-40, 41-60). Here are the necessary links:             
 [http://www.beeradvocate.com/place/list/?start=0&c_id=US&s_id=CT&brewery=Y&sort=name](), 
 [http://www.beeradvocate.com/place/list/?start=20&c_id=US&s_id=CT&brewery=Y&sort=name](), 
 [http://www.beeradvocate.com/place/list/?start=40&c_id=US&s_id=CT&brewery=Y&sort=name]().
 
-3. After initially setting up an account on import.io which can be done through linking your github, you can navigate to your my data/mine page and input the previous links into the bulk extractor for your _Magic API_ and run the queries.
+Screenshot 4
 
-4. The new output page will be an awesome tabular view of all of the extracted link data ready for export in multiple formats (ie. Spreadsheet for CSV)!
+[https://www.dropbox.com/s/yus6li8186qlfg7/BA-4.jpeg?dl=0]("https://www.dropbox.com/s/yus6li8186qlfg7/BA-4.jpeg?dl=0")
+
+Screenshot 5
+
+[https://www.dropbox.com/s/vgqahcnceoopmnk/BA-5.jpeg?dl=0]("https://www.dropbox.com/s/vgqahcnceoopmnk/BA-5.jpeg?dl=0")
+
+3. After initially setting up an account on import.io which can be done through linking your github account, you can navigate to your [my data](https://import.io/data/mine/) page and input the previous links into the bulk extractor located in the "How would you like to use this API?" dropdown for your _Magic API_ and press the button to run the queries.
+
+Screenshot 6
+[https://www.dropbox.com/s/cessjc3yhzhf0ov/BA-6.jpeg?dl=0]("https://www.dropbox.com/s/cessjc3yhzhf0ov/BA-6.jpeg?dl=0")
+
+4. The new output page will be a tabular view of all of the extracted link data ready for export in multiple formats such as Spreadsheet (for CSV), HTML, and JSON. We will download the Spreadsheet format for this tutorial.
+
+Screenshot 7
+
+[https://www.dropbox.com/s/cwi2o8acq0fnr85/BA-7.jpeg?dl=0]("https://www.dropbox.com/s/cwi2o8acq0fnr85/BA-7.jpeg?dl=0")
+
+# Data pre-processing
 
 5. Read the data into R:
 ```{r, message=FALSE}
@@ -24,7 +57,7 @@ beer_advocate <- read.csv("beeradvocate.com API 14th Dec 10-37.csv")
 beer_head <- head(beer_advocate)
 ```
 
-6. So we have some links and columns filled with more than one piece of info but that easy to sort and clean up:
+6. So we have some links and columns filled with more than one piece of information but that easy to fix by removing duplicate columns, creating coherant column headers, specifying and unifying missing data, extract the necessary information from other columns.
 ```{r}
 # remove duplicate columns with unimportant info
 beer_advocate$bottomdark_links._text <- NULL
@@ -44,11 +77,13 @@ beer_advocate[beer_advocate == "-"] = NA
 # clean up some of the columns and remove extra data
 beer_advocate$address <- as.character(beer_advocate$address) # change into character data type
 beer_advocate$address <- gsub(" official website", "", beer_advocate$address)
+
 # extract the phone number from the address column
 # http://stackoverflow.com/questions/21007607/extract-phone-number-regex
 library(stringr)
 beer_advocate$phone_number <- str_extract_all(beer_advocate$address, "\\(?\\d{3}\\)?[.-]? *\\d{3}[.-]? *[.-]?\\d{4}")
 beer_advocate$phone_number[beer_advocate$phone_number == "character(0)"] = NA
+
 # remove the phone number tag from the address field for geocoding
 beer_advocate$address <- gsub(" phone: \\(?\\d{3}\\)?[.-]? *\\d{3}[.-]? *[.-]?\\d{4}", "", beer_advocate$address)
 
@@ -58,18 +93,25 @@ beer_advocate$beer_avg <- as.numeric(levels(beer_advocate$beer_avg))[beer_advoca
 
 ```
 
-7. Grab some latitude and longitudes for those addresses!
+# Geolocation of addresses for plotting on a map
+
+7. Grab some latitude and longitudes for those craft brewery addresses!
 ```{r, message=FALSE}
 library(htmlwidgets)
 library(leaflet)
 library(ggmap)
 
-geo <- geocode(location = beer_advocate$address, output="latlon")
+# This function geocodes a location (find latitude and longitude) using the Google Maps API
+geo <- geocode(location = beer_advocate$address, output="latlon", source="google")
+
+# add those coordinates to our dataset
 beer_advocate$lon <- geo$lon
 beer_advocate$lat <- geo$lat
 ```
 
-8. plot those on a nifty leaflet map!
+# Data Vizualization using Leaflet
+
+8. Plot the corrdinates and the craft brewery onto a javascript based map, leaflet
 ```{r}
 # create the pop-up info
 beer_advocate$pop_up_content <- paste(sep = "<br/>", 
@@ -90,4 +132,3 @@ m <- leaflet(data = beer_advocate) %>%
 m
 ```
 
-9. In conclusion aside from the usual headaches of data cleaning, this was a cool half-day project that combines some neat features of web scraping with [Import.io](https://import.io/), and R.
