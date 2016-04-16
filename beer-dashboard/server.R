@@ -69,7 +69,7 @@ server <- function(input, output, session) {
   
   output$temp <- renderInfoBox({
     infoBox(
-      "Temperature", paste0(temp_reactive()), icon = icon("sun-o"),
+      "Temperature in Hartford", paste0(temp_reactive()), icon = icon("sun-o"),
       color = "orange"
     )
   })
@@ -79,6 +79,29 @@ server <- function(input, output, session) {
 #     a$TemperatureF
 #   })
 #   
+  #######################
+  ## segmentation tab ###  
+  ######################
+  # Combine the selected variables into a new data frame
+  selectedData <- reactive({
+    red_wine[, c(input$xcol, input$ycol)]
+  })
+  
+  clusters <- reactive({
+    kmeans(selectedData(), input$clusters)
+  })
+  
+  output$wine <- renderPlot({
+    par(mar = c(5.1, 4.1, 0, 1))
+    plot(selectedData(),
+         col = clusters()$cluster,
+         pch = 20, cex = 3)
+    points(clusters()$centers, pch = 4, cex = 4, lwd = 4)
+  })
+  
+  
+  
+  
   ##################
   ## Finance tab ###  
   ##################  
