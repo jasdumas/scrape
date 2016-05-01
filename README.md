@@ -8,7 +8,7 @@ web scraping and more
 
 ---
 
-### [Beer dashboard for craft breweries to harness competitor insights and environmental impacts](https://github.com/jasdumas/scrape/blob/master/beer-dashboard/Screen%20Shot%202016-05-01%20at%206.34.31%20PM.jpeg) - In-progress
+### [Beer dashboard for craft breweries to harness competitor insights and environmental impacts](https://github.com/jasdumas/scrape/tree/master/beer-dashboard) - In-progress ![](https://github.com/jasdumas/scrape/blob/master/beer-dashboard/Screen%20Shot%202016-05-01%20at%206.34.31%20PM.jpeg)
 
 ---
 
